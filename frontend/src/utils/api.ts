@@ -1,6 +1,6 @@
 import wretch from "wretch";
 
-const api = wretch("/api")
+const api = wretch("/api/v1")
   .errorType("json")
   .resolve((r) => r.json());
 export async function getUsers() {

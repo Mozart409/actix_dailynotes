@@ -46,7 +46,7 @@ struct User {
     updated_at: String,
 }
 
-#[get("/users")]
+#[get("/api/v1/users")]
 async fn get_users(data: web::Data<AppState>) -> web::Json<Vec<User>> {
     let pool = &data.pool;
     let users = sqlx::query_as::<_, User>("SELECT * FROM users ORDER BY id DESC LIMIT 10")
@@ -64,7 +64,7 @@ struct CreateUser {
     password: String,
 }
 
-#[post("/users")]
+#[post("/api/v1/users")]
 async fn create_user(params: web::Form<CreateUser>, data: web::Data<AppState>) -> impl Responder {
     let pool = &data.pool;
 
