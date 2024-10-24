@@ -1,7 +1,8 @@
 import { useForm } from "@tanstack/react-form";
 import { zodValidator } from "@tanstack/zod-form-adapter";
 import { z } from "zod";
-
+import { createUser } from "../utils/api";
+import toast, { Toaster } from "react-hot-toast";
 export default function Form() {
   const form = useForm({
     validatorAdapter: zodValidator(),
@@ -25,6 +26,18 @@ export default function Form() {
     },
     onSubmit: async (values) => {
       console.log(values);
+      try {
+        await createUser(
+          values.value.username,
+          values.value.email,
+          values.value.password,
+        );
+        console.info("User created");
+        toast.success("User created");
+      } catch (error) {
+        console.error(`${error}`);
+        toast.error(`${error}`);
+      }
     },
   });
 

@@ -1,6 +1,6 @@
 export function Navbar() {
   return (
-    <nav>
+    <nav className="container">
       <ul>
         <li>
           <a href="/">

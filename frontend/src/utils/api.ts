@@ -1,18 +1,39 @@
 import wretch from "wretch";
+import FormUrlAddon from "wretch/addons/formUrl";
 
 const api = wretch("/api/v1")
   .errorType("json")
   .resolve((r) => r.json());
+
+
 export async function getUsers() {
   try {
     const users = await api.get("/users");
     return users;
   } catch (error) {
-    // The API could return an empty object - in which case the status text is logged instead.
-    const message =
-      typeof error.message === "object" && Object.keys(error.message).length > 0
-        ? JSON.stringify(error.message)
-        : error.response.statusText;
-    console.error(`${error.status}: ${message}`);
+    console.error(`${error}`);
+  }
+}
+
+export async function createUser(
+  username: string,
+  email: string,
+  password: string,
+) {
+  try {
+    const newUser = await api
+      .url("/users")
+      .addon(FormUrlAddon)
+      .formUrl({
+        username,
+        email,
+        password,
+      })
+      .post();
+
+    return newUser;
+  } catch (error) {
+    console.error(`${error}`);
+    return error;
   }
 }
