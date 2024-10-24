@@ -1,7 +1,11 @@
 use actix_cors::Cors;
-use actix_web::{get, http::header, middleware::Logger, post, web, App, HttpServer, Responder};
+use actix_web::{
+    error, get,
+    http::{header, StatusCode},
+    middleware::Logger,
+    post, web, App, HttpResponse, HttpServer, Responder,
+};
 use serde::{Deserialize, Serialize};
-use sqlx::migrate::Migrator;
 use sqlx::sqlite::SqlitePool;
 use std::env;
 
@@ -68,6 +72,27 @@ struct CreateUser {
 async fn create_user(params: web::Form<CreateUser>, data: web::Data<AppState>) -> impl Responder {
     let pool = &data.pool;
 
+    // check if username or email is already taken
+
+    let existing_user = sqlx::query_as::<_, User>(
+        r#"
+        SELECT * FROM users
+        WHERE username = ? OR email = ?
+        "#,
+    )
+    .bind(&params.username)
+    .bind(&params.email)
+    .fetch_one(pool)
+    .await;
+
+    match existing_user {
+        Ok(user) => {
+            log::info!("User already exists: {:?}", user.email);
+            return (format!("User already exists"), StatusCode::BAD_REQUEST);
+        }
+        Err(_) => {}
+    }
+
     let result = sqlx::query!(
         r#"
         INSERT INTO users (username, email, password)
@@ -81,17 +106,26 @@ async fn create_user(params: web::Form<CreateUser>, data: web::Data<AppState>) -
     .await;
 
     match result {
-        Ok(_) => "User created",
+        Ok(_) => {
+            log::info!("User created: {:?}", params.email);
+            return (
+                format!("User created: {:?}", params.email),
+                StatusCode::CREATED,
+            );
+        }
         Err(e) => {
             log::error!("Failed to create user: {:?}", e);
-            "Failed to create user"
+            return (
+                format!("Failed to create user: {:?}", e),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            );
         }
     }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or("debug"));
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
     let pool = SqlitePool::connect(&env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
         .await
@@ -103,6 +137,7 @@ async fn main() -> std::io::Result<()> {
         .expect("Failed to migrate database");
 
     log::info!("Migrations applied");
+
     let state = AppState { pool };
 
     log::info!("starting HTTP server at http://localhost:8080");
@@ -123,6 +158,7 @@ async fn main() -> std::io::Result<()> {
             .service(index)
             .service(healthcheck)
             .service(get_users)
+            .service(create_user)
     })
     .bind(("0.0.0.0", 8080))?
     .run()
