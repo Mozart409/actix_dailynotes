@@ -6,12 +6,12 @@ use actix_web::{
     post, web, App, HttpResponse, HttpServer, Responder,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqlitePool;
+use sqlx::postgres::PgPool;
 use std::env;
 
 #[derive(Debug, Clone)]
 struct AppState {
-    pool: SqlitePool,
+    pool: PgPool,
 }
 
 #[get("/")]
@@ -68,7 +68,7 @@ struct CreateUser {
     password: String,
 }
 
-#[post("/api/v1/users")]
+/* #[post("/api/v1/users")]
 async fn create_user(params: web::Form<CreateUser>, data: web::Data<AppState>) -> impl Responder {
     let pool = &data.pool;
 
@@ -121,13 +121,13 @@ async fn create_user(params: web::Form<CreateUser>, data: web::Data<AppState>) -
             );
         }
     }
-}
+} */
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
-    let pool = SqlitePool::connect(&env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
+    let pool = PgPool::connect(&env::var("DATABASE_URL").expect("DATABASE_URL must be set"))
         .await
         .expect("Failed to connect to database");
 
@@ -158,7 +158,6 @@ async fn main() -> std::io::Result<()> {
             .service(index)
             .service(healthcheck)
             .service(get_users)
-            .service(create_user)
     })
     .bind(("0.0.0.0", 8080))?
     .run()
