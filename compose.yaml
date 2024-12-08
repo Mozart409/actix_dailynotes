@@ -1,0 +1,45 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: final
+    restart: unless-stopped
+    container_name: backend-dailynotes
+    env_file:
+      - ./.env
+    ports:
+      - 8081:8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/_healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+       db:
+         condition: service_healthy
+
+  db:
+    image: postgres:17.2
+    container_name: db-dailynotes
+    restart: always
+    volumes:
+       - db-data:/var/lib/postgresql/data
+    environment:
+       - POSTGRES_DB=dailynotes_dev
+       - POSTGRES_USER=postgres
+       - POSTGRES_PASSWORD=actix
+    command: >
+      postgres
+      -c shared_preload_libraries='pg_stat_statements'
+    ports:
+       - 5432:5432
+    healthcheck:
+       test: [ "CMD", "pg_isready" ]
+       interval: 10s
+       timeout: 5s
+       retries: 5
+
+volumes:
+   db-data:
+
+
